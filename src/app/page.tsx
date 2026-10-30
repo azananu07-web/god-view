@@ -54,5 +54,3 @@ export default function Landing({ searchParams }: { searchParams: { error?: stri
     </main>
   );
 }
-
-
