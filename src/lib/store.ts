@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import type { CompanyStore, Settings } from "./types";
+import { decrypt, encrypt } from "./crypto";
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 
@@ -41,6 +42,11 @@ export async function loadStore(companyId: string): Promise<CompanyStore | null>
   try {
     const raw = await fs.readFile(fileFor(companyId), "utf8");
     const store = JSON.parse(raw) as CompanyStore;
+    if (store.auth) {
+      store.auth.accessToken = decrypt(store.auth.accessToken);
+      store.auth.refreshToken = decrypt(store.auth.refreshToken);
+    }
+    for (const t of Object.values(store.locationTokens ?? {})) t.token = decrypt(t.token);
     store.settings = { ...DEFAULT_SETTINGS, ...store.settings };
     // A sync can't still be running after a process restart.
     store.sync.running = false;
@@ -59,9 +65,34 @@ export async function saveStore(store: CompanyStore): Promise<void> {
     await fs.mkdir(DATA_DIR, { recursive: true });
     const file = fileFor(store.companyId);
     const tmp = `${file}.${process.pid}.tmp`;
-    await fs.writeFile(tmp, JSON.stringify(store));
+    await fs.writeFile(tmp, serialise(store), { mode: 0o600 });
     await fs.rename(tmp, file);
   });
   locks.set(store.companyId, next.catch(() => {}));
   return next;
+}
+
+/** JSON with every OAuth token encrypted. */
+function serialise(store: CompanyStore): string {
+  const out: CompanyStore = {
+    ...store,
+    auth: store.auth && { ...store.auth, accessToken: encrypt(store.auth.accessToken), refreshToken: encrypt(store.auth.refreshToken) },
+    locationTokens: Object.fromEntries(Object.entries(store.locationTokens).map(([k, v]) => [k, { ...v, token: encrypt(v.token) }])),
+  };
+  return JSON.stringify(out);
+}
+
+/** Company ids that have a saved store (for scheduled syncs). */
+export async function listCompanyIds(): Promise<string[]> {
+  try {
+    const files = await fs.readdir(DATA_DIR);
+    return files.filter((f) => /^company-.+\.json$/.test(f)).map((f) => f.slice(8, -5));
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteStore(companyId: string): Promise<void> {
+  cache.delete(companyId);
+  await fs.rm(fileFor(companyId), { force: true });
 }

@@ -240,7 +240,17 @@ export default function Dashboard() {
           onPushed={(n) => { setPush(null); setDrawerId(undefined); setSelected(new Set()); setToast(`Snapshot push started for ${n} sub-account${n === 1 ? "" : "s"}`); void loadJobs(); setJobsOpen(true); }}
         />
       )}
-      {jobsOpen && <JobsPanel jobs={jobs} onClose={() => setJobsOpen(false)} />}
+      {jobsOpen && (
+        <JobsPanel
+          jobs={jobs}
+          onClose={() => setJobsOpen(false)}
+          onRetry={async (id) => {
+            const r = await fetch(`/api/snapshots/jobs/${id}/retry`, { method: "POST" });
+            setToast(r.ok ? "Retrying failed sub-accounts" : (await r.json()).error ?? "Retry failed");
+            void loadJobs();
+          }}
+        />
+      )}
       {toast && (
         <div role="status" className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] card px-4 py-2.5 text-sm shadow-xl anim-fade">{toast}</div>
       )}

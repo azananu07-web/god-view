@@ -1,0 +1,9 @@
+services:
+  god-view:
+    build: .
+    ports: ["3000:3000"]
+    env_file: .env.local
+    volumes: ["god-view-data:/app/data"]
+    restart: unless-stopped
+volumes:
+  god-view-data:

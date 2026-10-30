@@ -21,7 +21,11 @@ export function computeDashboard(store: CompanyStore, days: number): DashboardPa
   const daily = new Map(range.map((d) => [d, { date: d, leads: 0, revenue: 0, showed: 0, noShow: 0 }]));
   const accounts: AccountMetrics[] = Object.values(store.accounts).map((acc) => {
     const byDate = new Map(acc.daily.map((d) => [d.date, d]));
-    const withSpend = (d: DailyMetric) => (acc.dailySpendOverride != null ? { ...d, spend: acc.dailySpendOverride } : d);
+    const withSpend = (d: DailyMetric) => {
+      const imported = acc.importedSpend?.[d.date];
+      if (imported != null) return { ...d, spend: imported };
+      return acc.dailySpendOverride != null ? { ...d, spend: acc.dailySpendOverride } : d;
+    };
     const series = range.map((d) => withSpend(byDate.get(d) ?? ZERO(d)));
     const prev = prevRange.map((d) => withSpend(byDate.get(d) ?? ZERO(d)));
     const cur = sum(series);
@@ -83,7 +87,7 @@ export function computeDashboard(store: CompanyStore, days: number): DashboardPa
       for (const d of prevRange) {
         const r = byDate.get(d);
         if (!r) continue;
-        const spend = acc.dailySpendOverride ?? r.spend;
+        const spend = acc.importedSpend?.[d] ?? acc.dailySpendOverride ?? r.spend;
         a.showed += r.showed; a.noShow += r.noShow;
         if (spend > 0) { a.spend += spend; a.leads += r.leads; }
       }

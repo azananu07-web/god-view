@@ -20,6 +20,8 @@ export type Account = {
   /** Per-account overrides set from the dashboard. */
   dailySpendOverride?: number;
   churnThresholdOverride?: number;
+  /** Spend imported from CSV, keyed by YYYY-MM-DD. Takes precedence over synced spend. */
+  importedSpend?: Record<string, number>;
 };
 
 export type Settings = {
@@ -31,6 +33,10 @@ export type Settings = {
   adSpendCustomValueKey: string;
   /** Days of history to pull on each sync. */
   syncWindowDays: number;
+  /** Slack-compatible incoming webhook for churn alerts (POST {text}). */
+  alertWebhookUrl?: string;
+  /** Also alert when a red account recovers. */
+  alertOnRecovery?: boolean;
 };
 
 export type PushTargetStatus = "queued" | "pushing" | "processing" | "completed" | "failed";
@@ -81,6 +87,12 @@ export type CompanyStore = {
   settings: Settings;
   pushJobs: PushJob[];
   sync: SyncState;
+  /** Accounts we've already sent a churn alert for (cleared on recovery). */
+  alertedChurn?: string[];
+  /** Recent webhook ids, for idempotency. */
+  processedWebhooks?: string[];
+  /** Set when the agency uninstalls the app. */
+  uninstalledAt?: string;
 };
 
 export type Snapshot = { id: string; name: string; type?: string };

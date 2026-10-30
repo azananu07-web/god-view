@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStoreForSession, unauthorized } from "@/lib/context";
 import { saveStore } from "@/lib/store";
+import { validAlertUrl } from "@/lib/alerts";
 
 export async function GET() {
   const store = await getStoreForSession();
@@ -29,6 +30,12 @@ export async function PUT(req: Request) {
   s.churnThreshold = clampInt(body.churnThreshold, 0, 10_000) ?? s.churnThreshold;
   s.churnDays = clampInt(body.churnDays, 1, 30) ?? s.churnDays;
   s.syncWindowDays = clampInt(body.syncWindowDays, 14, 180) ?? s.syncWindowDays;
+  if (typeof body.alertWebhookUrl === "string") {
+    const url = body.alertWebhookUrl.trim();
+    if (url && !validAlertUrl(url)) return NextResponse.json({ error: "Alert webhook must be an https:// URL" }, { status: 400 });
+    s.alertWebhookUrl = url || undefined;
+  }
+  if (typeof body.alertOnRecovery === "boolean") s.alertOnRecovery = body.alertOnRecovery;
   if (typeof body.adSpendCustomValueKey === "string") s.adSpendCustomValueKey = body.adSpendCustomValueKey.trim().slice(0, 100);
   await saveStore(store);
   return NextResponse.json({ settings: s });
