@@ -33,6 +33,13 @@ export async function listLocations(store: CompanyStore): Promise<GhlLocation[]>
   return out;
 }
 
+export async function getLocation(store: CompanyStore, locationId: string): Promise<GhlLocation> {
+  const token = await getAgencyToken(store);
+  const data = await ghlFetch<any>(`/locations/${locationId}`, token);
+  const l = data.location ?? data;
+  return { id: l.id ?? l._id ?? locationId, name: l.name ?? locationId, city: l.city, state: l.state, timezone: l.timezone };
+}
+
 export async function getCompanyName(store: CompanyStore): Promise<string | undefined> {
   try {
     const token = await getAgencyToken(store);

@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { X, CheckCircle2, XCircle, Loader2, Clock, ChevronDown } from "lucide-react";
+import { X, CheckCircle2, XCircle, Loader2, Clock, ChevronDown, RotateCcw } from "lucide-react";
 import type { PushJob, PushTargetStatus } from "@/lib/types";
 import { relTime } from "@/lib/format";
 
@@ -17,7 +17,7 @@ export function jobActive(j: PushJob) {
   return j.targets.some((t) => t.status !== "completed" && t.status !== "failed");
 }
 
-export default function JobsPanel({ jobs, onClose }: { jobs: PushJob[]; onClose: () => void }) {
+export default function JobsPanel({ jobs, onClose, onRetry }: { jobs: PushJob[]; onClose: () => void; onRetry: (jobId: string) => void }) {
   const [open, setOpen] = useState<string | undefined>(jobs[0]?.id);
   const newest = jobs[0]?.id;
   useEffect(() => setOpen(newest), [newest]);
@@ -62,6 +62,13 @@ export default function JobsPanel({ jobs, onClose }: { jobs: PushJob[]; onClose:
                     {done}/{total} done{failed ? ` · ${failed} failed` : ""}{jobActive(j) ? " · in progress…" : ""}
                   </div>
                 </button>
+                {failed > 0 && !jobActive(j) && (
+                  <div className="px-4 pb-3 -mt-1">
+                    <button className="btn !py-1 !text-xs" onClick={() => onRetry(j.id)}>
+                      <RotateCcw className="w-3.5 h-3.5" /> Retry {failed} failed
+                    </button>
+                  </div>
+                )}
                 {isOpen && (
                   <ul className="border-t border-[var(--border)] divide-y divide-[var(--border)]">
                     {j.targets.map((t) => (
